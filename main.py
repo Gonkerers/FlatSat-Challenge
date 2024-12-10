@@ -21,6 +21,7 @@ from adafruit_lis3mdl import LIS3MDL
 from git import Repo
 from picamera2 import Picamera2, Preview
 import math
+import cv2 as cv
 
 #VARIABLES
 NAME = "CalvinM"
@@ -31,7 +32,7 @@ FOLDER_PATH = "output" #Your image folder path in your GitHub repo: ex. /Images
 i2c = board.I2C()
 accel_gyro = LSM6DS(i2c)
 mag = LIS3MDL(i2c)
-picam2 = Picamera2()
+#picam2 = Picamera2()
 
 def img_gen(name):
     """
@@ -50,12 +51,9 @@ def take_photo():
     Replace psuedocode with your own code.
     """
     # configure picamera2 to take photos at the size of the sensor
-    mode = picam2.sensor_modes[2]
-    camera_config = picam2.create_still_configuration(sensor={"output_size": mode['size'], "bit_depth": mode['bit_depth']})
-    picam2.configure(camera_config)
-    picam2.start()
-    print("SENSOR MODES", picam2.sensor_modes)
-    print("CAMERA CONFIG", camera_config)
+    videocapture = cv.VideoCapture(0)
+    print(videocapture.isOpened())
+    #mode = picam2.sensor_modes[2]
 
     last_time = time.time()
     while True:
@@ -70,11 +68,26 @@ def take_photo():
         # only allow taking photos more than 1 second after last photo
         delay = time.time() - last_time
         
+        #camera_config = picam2.create_still_configuration()#sensor={"output_size": mode['size'], "bit_depth": mode['bit_depth']})
+        #picam2.configure(camera_config)
+        #picam2.start(show_preview=False)
+            
         if (delay > 1):
             if (length >= THRESHOLD):
-                picam2.capture_file(img_gen(NAME))
-                print(f"AAAAAAAAAUUUUUUUUUUGHHHHHHHHHHHHH STOP THROWING ME {length:.2f}")
+                filename = img_gen(NAME)
+                success,image = videocapture.read()
+                if success:
+                    print("read successful")
+                    cv.imwrite(filename, image)
+                else:
+                    print("read failed")
+                #picam2.capture_file(img_gen(NAME))
+                print(f"Taking photo; Current acceleration vector magnitude = {length:.2f}")
                 last_time = time.time()
+        
+        videocapture.release()
+
+        #picam2.stop()
 
 def main():
     take_photo()
