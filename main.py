@@ -19,38 +19,19 @@ import board
 from adafruit_lsm6ds.lsm6dsox import LSM6DSOX as LSM6DS
 from adafruit_lis3mdl import LIS3MDL
 from git import Repo
-from picamera2 import Picamera2
+from picamera2 import Picamera2, Preview
+import math
 
 #VARIABLES
-THRESHOLD = 0      #Any desired value from the accelerometer
-REPO_PATH = ""     #Your github repo path: ex. /home/pi/FlatSatChallenge
-FOLDER_PATH = ""   #Your image folder path in your GitHub repo: ex. /Images
+NAME = "CalvinM"
+THRESHOLD = 4          #Any desired value from the accelerometer
+FOLDER_PATH = "output" #Your image folder path in your GitHub repo: ex. /Images
 
 #imu and camera initialization
 i2c = board.I2C()
 accel_gyro = LSM6DS(i2c)
 mag = LIS3MDL(i2c)
 picam2 = Picamera2()
-
-
-def git_push():
-    """
-    This function is complete. Stages, commits, and pushes new images to your GitHub repo.
-    """
-    try:
-        repo = Repo(REPO_PATH)
-        origin = repo.remote('origin')
-        print('added remote')
-        origin.pull()
-        print('pulled changes')
-        repo.git.add(REPO_PATH + FOLDER_PATH)
-        repo.index.commit('New Photo')
-        print('made the commit')
-        origin.push()
-        print('pushed changes')
-    except:
-        print('Couldn\'t upload to git')
-
 
 def img_gen(name):
     """
@@ -60,30 +41,43 @@ def img_gen(name):
         name (str): your name ex. MasonM
     """
     t = time.strftime("_%H%M%S")
-    imgname = (f'{REPO_PATH}/{FOLDER_PATH}/{name}{t}.jpg')
+    imgname = (f'{FOLDER_PATH}/{name}{t}.jpg')
     return imgname
-
 
 def take_photo():
     """
     This function is NOT complete. Takes a photo when the FlatSat is shaken.
     Replace psuedocode with your own code.
     """
+    # configure picamera2 to take photos at the size of the sensor
+    mode = picam2.sensor_modes[2]
+    camera_config = picam2.create_still_configuration(sensor={"output_size": mode['size'], "bit_depth": mode['bit_depth']})
+    picam2.configure(camera_config)
+    picam2.start()
+    print("SENSOR MODES", picam2.sensor_modes)
+    print("CAMERA CONFIG", camera_config)
+
+    last_time = time.time()
     while True:
         accelx, accely, accelz = accel_gyro.acceleration
-
-        #CHECKS IF READINGS ARE ABOVE THRESHOLD
-            #PAUSE
-            #name = ""     #First Name, Last Initial  ex. MasonM
-            #TAKE PHOTO
-            #PUSH PHOTO TO GITHUB
         
-        #PAUSE
+        # calculate magnitude of acceleration
+        length_squared = accelx*accelx + accely * accely + accelz * accelz 
+        length = math.sqrt(length_squared)
+        length -= 9.83
+        length = max(length, 0)
 
+        # only allow taking photos more than 1 second after last photo
+        delay = time.time() - last_time
+        
+        if (delay > 1):
+            if (length >= THRESHOLD):
+                picam2.capture_file(img_gen(NAME))
+                print(f"AAAAAAAAAUUUUUUUUUUGHHHHHHHHHHHHH STOP THROWING ME {length:.2f}")
+                last_time = time.time()
 
 def main():
     take_photo()
-
 
 if __name__ == '__main__':
     main()
