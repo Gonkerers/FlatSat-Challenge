@@ -10,17 +10,19 @@ The provided functions are only for reference, you do not need to use them.
 You will need to complete the take_photo() function and configure the VARIABLES section
 """
 
-#AUTHOR: 
-#DATE:
+#AUTHOR: Gonkerers 
+#DATE: 2 December 2024
 
 #import libraries
 import time
+import datetime
 import board
 from adafruit_lsm6ds.lsm6dsox import LSM6DSOX as LSM6DS
 from adafruit_lis3mdl import LIS3MDL
 from git import Repo
 from picamera2 import Picamera2, Preview
 import math
+import os
 
 #VARIABLES
 NAME = "CalvinM"
@@ -31,32 +33,14 @@ FOLDER_PATH = "output" #Your image folder path in your GitHub repo: ex. /Images
 i2c = board.I2C()
 accel_gyro = LSM6DS(i2c)
 mag = LIS3MDL(i2c)
-picam2 = Picamera2()
 
 def img_gen(name):
-    """
-    This function is complete. Generates a new image name.
-
-    Parameters:
-        name (str): your name ex. MasonM
-    """
     t = time.strftime("_%H%M%S")
-    imgname = (f'{FOLDER_PATH}/{name}{t}.jpg')
+    d = datetime.date.today()
+    imgname = (f'{FOLDER_PATH}/{name}-{d}-{t}.jpg')
     return imgname
 
 def take_photo():
-    """
-    This function is NOT complete. Takes a photo when the FlatSat is shaken.
-    Replace psuedocode with your own code.
-    """
-    # configure picamera2 to take photos at the size of the sensor
-    mode = picam2.sensor_modes[2]
-    camera_config = picam2.create_still_configuration(sensor={"output_size": mode['size'], "bit_depth": mode['bit_depth']})
-    picam2.configure(camera_config)
-    picam2.start()
-    print("SENSOR MODES", picam2.sensor_modes)
-    print("CAMERA CONFIG", camera_config)
-
     last_time = time.time()
     while True:
         accelx, accely, accelz = accel_gyro.acceleration
@@ -72,8 +56,9 @@ def take_photo():
         
         if (delay > 1):
             if (length >= THRESHOLD):
-                picam2.capture_file(img_gen(NAME))
-                print(f"AAAAAAAAAUUUUUUUUUUGHHHHHHHHHHHHH STOP THROWING ME {length:.2f}")
+                filename = img_gen(NAME)
+                os.system(f"libcamera-still -o {filename} --nopreview --immediate")
+                print(f"Taking photo; Current acceleration vector magnitude = {length:.2f}")
                 last_time = time.time()
 
 def main():
